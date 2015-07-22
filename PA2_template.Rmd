@@ -1,21 +1,400 @@
 ---
-title: "PA2_template"
+title: "Understanding Weather"
 author: "Niambh Scullion"
-date: "Sunday, July 19, 2015"
-output: html_document
+output: 
+  html_document:
+   toc: true
+   number_sections: true
 ---
 The purpose of this report is to provide you the government information they will need in managing future 
 wearther events. 
 
+### Data Processing
 
-```{r}
-summary(cars)
+1. Read the data
+```{r read_data, echo=TRUE, warning=FALSE, message=FALSE, cache = TRUE}  
+
+  if (!require("knitr")) {
+   install.packages("knitr")
+  }
+  
+  if (!require("utils")) {
+   install.packages("utils")
+  }
+  if (!require("base")) {
+   install.packages("base")
+  }
+  require("knitr")
+  require("utils")
+  require("base")
+  
+  compressedFile<-"C:/Git/RepData_PeerAssessment_2/RepData_PeerAssessment_2/repdata-data-StormData.csv.bz2"
+  disk_file<-"C:/Git/RepData_PeerAssessment_2/RepData_PeerAssessment_2/savedFile.csv"
+ 
+  if(file.exists(disk_file)){
+   #read the previously saved file
+   readcsvbz2file <-read.table(file=disk_file, header = TRUE, sep = ",")
+ 
+  }else{
+  #read the file
+  readcsvbz2file <- read.csv(bzfile(compressedFile))
+  
+  #save the file
+  save(readcsvbz2file,file=disk_file)
+ 
+  }
+  
+
 ```
 
-You can also embed plots, for example:
+2. Analyse the data
 
-```{r, echo=FALSE}
-plot(cars)
+```{r analyse_data_1, echo=TRUE, warning=FALSE, message=FALSE, cache = TRUE} 
+  head(readcsvbz2file)
+
 ```
 
-Note that the `echo = FALSE` parameter was added to the code chunk to prevent printing of the R code that generated the plot.
+
+```{r analyse_data_2, echo=TRUE, warning=FALSE, message=FALSE, cache = TRUE} 
+  str(readcsvbz2file)
+
+```
+
+
+```{r analyse_data_3, echo=TRUE, warning=FALSE, message=FALSE, cache = TRUE} 
+  summary(readcsvbz2file)
+```
+
+3. Identify the injuries and fatalaties for each state and event type.
+
+```{r subset_injuries_and_fatalities, echo=TRUE, warning=FALSE, message=FALSE}   
+
+ event_per_state_file<-"C:/Git/RepData_PeerAssessment_2/RepData_PeerAssessment_2/eventPerState.csv"
+ statedata<-readcsvbz2file[c("STATE","BGN_DATE", "EVTYPE", "FATALITIES","INJURIES") ]
+ write.csv(statedata, file =event_per_state_file)
+ head(statedata)
+
+  
+```
+
+### Data Cleansing
+1. Remove Non Weather Events
+```{r remove_non_weather_events, echo=TRUE, warning=FALSE, message=FALSE}
+ 
+ removed_summaries_file<-"C:/Git/RepData_PeerAssessment_2/RepData_PeerAssessment_2/removed_summaries_file.csv"
+
+ #Identify the instances of the 'Summary' String
+ lower_case_Summary<-which(apply(removed_Summaries, 1, function(x) any(grepl("Summary", x))))
+ upper_case_Summary<which(apply(removed_Summaries, 1, function(x) any(grepl("SUMMARY", x))))
+ lower_case_Summary<-names(lower_case_Summary)
+ upper_case_Summary<-names(upper_case_Summary)
+ 
+ rows_for_removal<-rbind(lower_case_Summary,upper_case_Summary)
+ 
+
+ #removed_Summaries<-statedata
+ #removed_Summaries<-removed_Summaries[]
+ #write.csv(removed_Summaries, file =removed_summaries_file)
+
+```
+
+
+2. Tidy event names, remove duplicates, merge events in to simular categories
+```{r remove_duplicate_event_names, echo=TRUE, warning=FALSE, message=FALSE}
+
+ unique_names<-as.character(unique(statedata$EVTYPE))
+ x<-unique_names
+ x <- gsub("((.)*([Ff][Ll][Oo][Oo][Dd])+(.)*)", "FLOODING", x)
+ x <- gsub("((.)*([Ff][Ll][Dd][Gg])+(.)*)", "FLOODING", x)
+ x <- gsub("((.)*([Ff][Ll][Dd])+(.)*)", "FLOODING", x)
+ x <- gsub("((.)*([Ss][Nn][Oo][Ww])+(.)*)", "SNOW", x)
+ x <- gsub("((.)*([Tt][Ss][Tt][Mm])+(.)*)", "THUNDERSTORM", x)
+ x <- gsub("((.)*([Tt][Hh][Uu][Nn][Dd][Ee][Rr][Ss][Tt][Oo][Rr][Mm])+(.)*)", "THUNDERSTORM", x)
+ x <- gsub("((.)*(HEAVY SHOWER)+(.)*)", "RAIN", x)
+ x <- gsub("((.)*(HEAVY RAIN/WIND)+(.)*)", "THUNDERSTORM", x)
+ x <- gsub("((.)*(Torrential Rainfall)+(.)*)", "THUNDERSTORM", x)
+ x <- gsub("((.)*(Freezing Rain)+(.)*)", "SLEET", x)
+ x <- gsub("((.)*(Freezing Drizzle)+(.)*)", "SLEET", x)
+ x <- gsub("((.)*(Freezing drizzle)+(.)*)", "SLEET", x)
+ x <- gsub("((.)*([Bb][Ll][Ii][Zz][Zz][Aa][Rr][Dd])+(.)*)", "SLEET/SNOW", x)
+ x <- gsub("((.)*([Ww][Ii][Nn][Tt][Ee][Rr])+(.)*", "SLEET/SNOW", x)
+ x <- gsub("((.)*([Rr][Aa][Ii][Nn])+(.)*)", "RAIN", x)
+ x <- gsub("((.)*([Cc][Oo][Ll][Dd])+(.)*)", "COLD", x)
+ x <- gsub("((.)*([Cc][Oo][Oo][Ll])+(.)*)", "COLD", x)
+ x <- gsub("((.)*([Ww][Aa][Rr][Mm])+(.)*)", "HEAT", x)
+ x <- gsub("((.)*(UNSEASONAL LOW)+(.)*)", "COLD", x)
+ x <- gsub("((.)*(UNSEASONABLY WARM)+(.)*)", "HEAT", x)
+ x <- gsub("((.)*([Rr][Ee][Cc][Oo][Rr][Dd] [Tt][Ee][Mm][Pp])+(.)*)", "HEAT", x)
+ x <- gsub("((.)*([Ww][Ii][Nn][Dd])+(.)*)", "WIND", x)
+ x <- gsub("((.)*([Hh][Aa][Ii][Ll])+(.)*)", "HAIL", x)
+ x <- gsub("((.)*([Ss][Uu][Rr][Ff])+(.)*)", "HIGH SURF", x)
+ x <- gsub("((.)*([Vv][Oo][Ll][Cc][Aa][Nn])+(.)*)", "VOLCANO", x)
+ x <- gsub("((.)*(TORNADO)+(.)*)", "TORNADO", x)
+ x <- gsub("((.)*([Ww][Ee][Tt])+(.)*)", "RAIN", x)
+ x <- gsub("((.)*([Wi][Ii][Nn][Tt][Ee][Rr] [Ww][Ee][Aa][Tt])+(.)*)", "SNOW", x)
+ x <- gsub("((.)*([Wi][Ii][Nn][Tt][Ee][Rr][Yy])+(.)*)", "SNOW", x)
+ x <- gsub("((.)*([Hh][Oo][Tt])+(.)*)", "HEAT", x)
+ x <- gsub("((.)*([Hh][Ee][Aa][Tt])+(.)*)", "HEAT", x)
+ x <- gsub("((.)*([Dd][Rr][Yy])+(.)*)", "HEAT", x)
+ x <- gsub("((.)*([Hh][Yy][Pp][Oo][Tt][Hh])+(.)*)", "HYPOTHERMIA", x)
+ x <- gsub("((.)*([Ff][Rr][Ee][Ee][Zz])+(.)*)", "FROST", x)
+ x <- gsub("((.)*([Ff][Rr][Oo][Ss][Tt])+(.)*)", "FROST", x)
+ x <- gsub("((.)*([Dd][Uu][Ss][Tt])+(.)*)", "DUST", x)
+ x <- gsub("((.)*([Ii][Cc][Ee])+(.)*)", "ICE", x)
+ x <- gsub("((.)*([Ii][Cc][Yy])+(.)*)", "ICE", x)
+ x <- gsub("((.)*([Mm][Uu][Dd][Ss][Ll][Ii][Dd][Ee])+(.)*)", "LANDSLIDE", x)
+ x <- gsub("((.)*([Mm][Uu][Dd] [Ss][Ll][Ii][Dd][Ee])+(.)*)", "LANDSLIDE", x)
+ x <- gsub("((.)*([Hh][Uu][Rr][Rr][Ii][Cc][Aa][Nn][Ee])+(.)*)", "HURRICANE", x)
+ x <- gsub("((.)*(REMNANTS OF FLOYD)+(.)*)", "HURRICANE", x)
+ x <- gsub("((.)*(ROCK SLIDE)+(.)*)", "LANDSLIDE", x)
+ x <- gsub("((.)*(LANDSLUMP)+(.)*)", "LANDSLIDE", x)
+ x <- gsub("((.)*([Ff][Oo][Gg])+(.)*)", "FOG", x)
+ x <- gsub("((.)*(BLOW-OUT TIDES)+(.)*)", "TIDAL", x)
+ x <- gsub("((.)*(HIGH  SWELLS)+(.)*)", "TIDAL", x)
+ x <- gsub("((.)*([Tt][Ii][Dd][Ee])+(.)*)", "TIDAL", x)
+ x <- gsub("((.)*(SWELLS)+(.)*)", "TIDAL", x)
+ x <- gsub("((.)*([Ee][Rr][Oo][Ss][Ii][Oo][Nn])+(.)*)", "EROSION", x)
+ x <- gsub("((.)*(Coastal Storm)+(.)*)", "THUNDERSTORM", x)
+ x <- gsub("((.)*(Temperature record)+(.)*)", "HEAT", x)
+ x <- gsub("((.)*(RECORD TEMPERATURES)+(.)*)", "HEAT", x)
+ x <- gsub("((.)*(WATERSPOUT)+(.)*)", "WATERSPOUT", x)
+ x <- gsub("((.)*(RAPIDLY RISING WATER)+(.)*)", "FLOODING", x)
+ x <- gsub("((.)*(LOW TEMPERATURE)+(.)*)", "COLD", x)
+ x <- gsub("((.)*(LIGHTNING)+(.)*)", "LIGHTNING", x)
+ x <- gsub("((.)*(RIP CURRENT)+(.)*)", "TIDAL", x)
+ x <- gsub("((.)*(HIGH WAVES)+(.)*)", "TIDAL", x)
+ x <- gsub("((.)*(COASTAL SURGE)+(.)*)", "TIDAL", x)
+ x <- gsub("((.)*(FIRE)+(.)*)", "WILDFIRES", x)
+ x <- gsub("((.)*(AVALANCE)+(.)*)", "AVALANCHE", x)
+ x <- gsub("((.)*(GUSTNADO)+(.)*)", "THUNDERSTORM", x)
+ x <- gsub("((.)*(WALL CLOUD)+(.)*)", "THUNDERSTORM", x)
+ x <- gsub("((.)*(STORM)+(.)*)", "THUNDERSTORM", x)
+ x <- gsub("((.)*(URBAN/SMALL STREAM)+(.)*)", "FLOODING", x)
+ x <- gsub("((.)*(FUNNEL)+(.)*)", "THUNDERSTORM", x)
+ x <- gsub("((.)*([Tt][Rr][Oo][Pp][Ii][Cc][Aa][Ll] [Ss][Tt][Oo][Rr][Mm]])+(.)*)", "TROPICAL STORM", x)
+ x <- gsub("((.)*(FLASH FLOOODING)+(.)*)", "FLOODING", x)
+ x <- gsub("((.)*(HIGH TEMP)+(.)*)", "HEAT", x)
+ x <- gsub("((.)*(MICROBURST)+(.)*)", "THUNDERSTORM", x)
+ x <- gsub("((.)*(DOWNBURST)+(.)*)", "THUNDERSTORM", x)
+ x <- gsub("((.)*([Pp][Rr][Ee][Cc][Ii][Pp][Ii][Tt][Aa][Tt])+(.)*)", "SLEET/SNOW", x)
+
+```
+### Data Processing
+
+1. Identify the number of injuries by state and event
+
+```{r get_number_of_injuries_per_state, echo=TRUE, warning=FALSE, message=FALSE}   
+ injurycount_file<-"C:/Git/RepData_PeerAssessment_2/RepData_PeerAssessment_2/injurycount.csv"
+ 
+ if (!require("stats")) {
+   install.packages("stats")
+  }
+  require("stats")
+  
+ 
+  #total number of injuries per STATE and EVTYPE
+  injurycount <- aggregate(INJURIES ~ STATE+EVTYPE, data = statedata, sum)
+  write.csv(injurycount, file =injurycount_file)
+  
+  #extract only states with documented injuries
+  states_with_documented_injuries <- injurycount[ which(injurycount$INJURIES>0), ]
+  head(states_with_documented_injuries)
+  
+```
+
+2. Calculate the mean injuries per event type
+
+```{r mean_injury_event_type, echo=TRUE, warning=FALSE, message=FALSE}   
+ 
+  mean_evt_type_file<-"C:/Git/RepData_PeerAssessment_2/RepData_PeerAssessment_2/mean_event.csv"
+ 
+  if (!require("stats")) {
+   install.packages("stats")
+  }
+  require("stats")
+ 
+  #mean of injuries per EVTYPE 
+  mean_evt_type <- 
+    aggregate(INJURIES ~ EVTYPE, data = states_with_documented_injuries, mean)
+  write.csv(merged_injury_data, file =mean_evt_type_file)
+  head(mean_evt_type)
+ 
+  
+```
+
+3. Add the MEAN column to the injuries data. This will identify states higher than the average
+
+```{r merge_injury_data, echo=TRUE, warning=FALSE, message=FALSE}
+  merge_data_file<-"C:/Git/RepData_PeerAssessment_2/RepData_PeerAssessment_2/mean_injuries.csv"
+  
+  merged_injury_data<-merge(injurycount, mean_evt_type, by=c("EVTYPE") )
+  names(merged_injury_data)<-c("Weather_Event","State", "Injury_Count","Mean_Injury")
+  write.csv(merged_injury_data, file =merge_data_file)
+
+  head(merged_injury_data)
+  
+```
+
+4. Identify States where injuries are twice times the average and more than one frequency.
+
+```{r higher_than__injury_mean_states, echo=TRUE, warning=FALSE, message=FALSE}
+  highest_injuries <-"C:/Git/RepData_PeerAssessment_2/RepData_PeerAssessment_2/highest_injuries.csv"
+  
+  #get the frequency of events
+  if (!require("plyr")) {
+   install.packages("plyr")
+  }
+  require("plyr")
+  frequency<- count(merged_injury_data$State)
+  head(frequency,30)
+  names(frequency)<-c("State","Freq")
+  
+  #merge the frequency with the highger_than_mean_states
+  merged_injury_data<-merge(merged_injury_data, frequency, by=c("State") )
+
+ 
+  
+  highger_than_mean_states <- 
+    merged_injury_data[which(merged_injury_data$Injury_Count>merged_injury_data$Mean_Injury*2), ]
+  
+  head(highger_than_mean_states)
+ 
+  #identify where more than one injury type has occurred.
+  higher_mean_and_freq <- highger_than_mean_states[which(highger_than_mean_states$Freq> 10),]
+ 
+  head(higher_mean_and_freq)
+
+  write.csv(highger_than_mean_states, file =highest_injuries)
+  
+   
+```
+
+
+5. Identify the number of fatalities by state and event
+
+```{r get_number_of_fatalaties_per_state, echo=TRUE, warning=FALSE, message=FALSE}   
+ fatalitiescount_file<-"C:/Git/RepData_PeerAssessment_2/RepData_PeerAssessment_2/fatalities_count.csv"
+ 
+ if (!require("stats")) {
+   install.packages("stats")
+  }
+  require("stats")
+  
+ 
+  #total number of fatalities per STATE 
+  fatalitiescount <- aggregate(FATALITIES ~ STATE+EVTYPE, data = statedata, sum)
+  write.csv(fatalitiescount, file =fatalitiescount_file) 
+  head(fatalitiescount)
+  
+  #extract only states with documented fatalities
+  states_with_documented_fatalities <- fatalitiescount[ which(fatalitiescount$FATALITIES>0), ]
+  head(states_with_documented_fatalities)
+  
+```
+
+6. Calculate the mean fatalities per event type
+
+```{r mean_fatalities_event_type, echo=TRUE, warning=FALSE, message=FALSE}   
+ 
+  mean_evt_fatalities_type_file<-"C:/Git/RepData_PeerAssessment_2/RepData_PeerAssessment_2/mean_fatalities_event.csv"
+ 
+  if (!require("stats")) {
+   install.packages("stats")
+  }
+  require("stats")
+ 
+  #mean of fatalities per EVTYPE 
+  mean_evt_fatalities_type <- 
+      aggregate(FATALITIES ~ EVTYPE, data = states_with_documented_fatalities, mean)
+  write.csv(mean_evt_fatalities_type, file =mean_evt_fatalities_type_file)
+  head(mean_evt_fatalities_type)
+ 
+  
+```
+
+7. Add the MEAN column to the fatality data. This will identify states higher than the average
+
+```{r merge_fatalities_data, echo=TRUE, warning=FALSE, message=FALSE}
+  merge_fatalities_data_file<-"C:/Git/RepData_PeerAssessment_2/RepData_PeerAssessment_2/mean_fatalities.csv"
+  
+  merge_fatalities_data<-merge(fatalitiescount, mean_evt_fatalities_type, by=c("EVTYPE") )
+  write.csv(merge_fatalities_data, file =merge_fatalities_data_file)
+  names(merge_fatalities_data)<-c("Weather_Event","State", "Fatality_Count","Mean_Fatalities")
+  head(merge_fatalities_data)
+  
+```
+
+8. Identify States where fatalities are twice the average.
+
+```{r higher_than_fatalities_mean_states, echo=TRUE, warning=FALSE, message=FALSE}
+  highest_fatalities<-"C:/Git/RepData_PeerAssessment_2/RepData_PeerAssessment_2/states_with_higher_fatalities_mean.csv"
+    
+  #get the frequency of events
+  if (!require("plyr")) {
+   install.packages("plyr")
+  }
+  require("plyr")
+  frequency<- count(merge_fatalities_data$State)
+  head(frequency,20)
+  names(frequency)<-c("State","Freq")
+
+  #merge the frequency with the merge_fatalities_data
+  merge_fatalities_data<-merge(merge_fatalities_data, frequency, by=c("State") )
+
+  highFatalityCount <- 
+    merge_fatalities_data[which(merge_fatalities_data$Fatality_Count>(merge_fatalities_data$Mean_Fatalities*2)), ]
+ 
+  write.csv(highFatalityCount, file =highest_fatalities)
+  
+
+  #identify where more than one injury type has occurred.
+  highFatalityCount <- highFatalityCount[which(highFatalityCount$Freq> 10),]
+  head(highFatalityCount)
+
+  
+```
+
+
+
+
+```
+
+### Results
+1. Plot states with Injury count twice and fatalities from more than one event
+```{r plot_events_with_higher_means, echo=TRUE, warning=FALSE, message=FALSE}
+ 
+  if (!require("ggplot2")) {
+   install.packages("ggplot2")
+  }
+  
+  require("ggplot2")
+  
+  a <- ggplot(data=higher_mean_and_freq, aes(x = State, y = Injury_Count))
+  a <- a + geom_point(aes(colour=Weather_Event,group=Weather_Event))
+  a <- a + xlab("State") + ylab("Injuries") + ggtitle("States with Injury count twice and fatalities from more than one event.") 
+  print(a)
+  
+ 
+```
+
+1. Plot states with fatality count twice and fatalities from more than one event
+
+```{r plot_events_with_higherfatalities_means, echo=TRUE, warning=FALSE, message=FALSE}
+ 
+  if (!require("ggplot2")) {
+   install.packages("ggplot2")
+  }
+  
+  require("ggplot2")
+  
+  a <- ggplot(data=highFatalityCount, aes(x = State, y = Fatality_Count))
+  a <- a + geom_point(aes(colour=Weather_Event,group=Weather_Event))
+  a <- a + xlab("State") + ylab("Injuries") + ggtitle("States with fatality count twice and fatalities from more than one event.") 
+  print(a)
+  
+ 
+```
+
+
+
+
